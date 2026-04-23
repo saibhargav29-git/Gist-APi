@@ -27,8 +27,8 @@ def get_public_gists(username: str, per_page: int = DEFAULT_PER_PAGE) -> list[di
 
     WHY pagination matters:
         GitHub's API returns at most 100 gists per request (default 30).
-        A user like 'torvalds' may have hundreds. Without pagination
-        you silently return an incomplete list — a subtle, hard-to-spot bug.
+        some users may have hundreds of gists. Without pagination
+        you silently return an incomplete list
 
     Args:
         username:    GitHub username.

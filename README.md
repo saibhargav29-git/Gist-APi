@@ -41,3 +41,76 @@ Equal Experts
 __________________________________________
 [^1]: For example Go, Python or Ruby but not Bash or Powershell.  
 [^2]: https://docs.github.com/en/rest/gists/gists?apiVersion=2022-11-28
+
+
+
+____________________________________________________________________________________
+
+____________________________________________________________________________________
+
+## 🚀 My Solution — Gist API
+
+A Python/Flask API that fetches all public GitHub Gists for a given user and returns a curated JSON response.
+
+### Requirements
+- Docker (recommended — no local Python setup needed)
+- Python 3.13+ (only if running locally without Docker)
+
+### Run with Docker (Recommended)
+
+```bash
+# 1. Build the image
+docker build -t gist-api .
+
+# 2. Run the container (listens on port 8080)
+docker run -p 8080:8080 gist-api
+```
+
+### Run locally (without Docker)
+
+```bash
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
+
+### Usage
+
+```bash
+# Fetch all public gists for a GitHub user
+curl http://localhost:8080/octocat
+
+# Liveness check
+curl http://localhost:8080/health
+```
+
+### Example Response
+
+```json
+{
+  "username": "octocat",
+  "gist_count": 8,
+  "gists": [ ... ]
+}
+```
+
+### Error Responses
+
+| Scenario              | Status |
+|-----------------------|--------|
+| GitHub user not found | 404    |
+| GitHub API error      | 502    |
+
+### Run tests
+
+```bash
+pip install -r requirements.txt
+pytest tests/ -v --cov=. --cov-report=term-missing
+```
+
+### Design decisions
+
+- **Flask**: minimal, explicit, appropriate for a single-endpoint service
+- **Pagination**: fetches all pages from GitHub so users with many gists are not silently truncated
+- **/health endpoint**: liveness probe for Docker HEALTHCHECK

@@ -5,7 +5,7 @@ Thin HTTP layer. Routes requests to the GitHub client and
 maps domain errors to appropriate HTTP status codes.
 
 All business logic lives in github_client.py — this file
-only concerns itself with HTTP request/response handling.
+only deals itself with HTTP request/response handling.
 """
 
 import logging
@@ -14,10 +14,10 @@ from github_client import get_public_gists, GitHubUserNotFoundError, GitHubAPIEr
 
 app = Flask(__name__)
 
-# WHY logging?
+
 # If GitHub renames or removes a field, .get() returns None silently.
 # Logging a warning makes that visible in server output without crashing
-# the entire response — a proportionate response to a non-critical change.
+# the entire response 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,18 @@ def _format_gist(gist: dict) -> dict:
         "files": list(gist.get("files", {}).keys()),
         "comments": gist.get("comments", 0),
     }
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    """
+    Simple liveness endpoint for orchestrators (Kubernetes, Docker, etc.)
+
+    Returns 200 as long as the process is alive and Flask is responding.
+    Use this as a Kubernetes liveness probe — if it stops returning 200,
+    the orchestrator restarts the container.
+    """
+    return jsonify({"status": "healthy"}), 200
 
 
 @app.route("/<username>", methods=["GET"])

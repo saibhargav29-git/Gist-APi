@@ -9,9 +9,6 @@ Structure:
   TestUserGistsRoute — integration-style tests for the Flask routes
                        (github_client is mocked; Flask test client used)
 
-WHY mock external calls?
-  Tests must be fast, deterministic, and independent of GitHub uptime,
-  rate limits, and network availability. We test OUR code, not GitHub's.
 """
 
 import pytest
@@ -208,3 +205,8 @@ class TestUserGistsRoute:
         assert response.status_code == 200
         mock_logger.warning.assert_called_once()
         assert response.get_json()["gists"][0]["url"] is None
+
+    def test_health_returns_200(self, client):
+        response = client.get("/health")
+        assert response.status_code == 200
+        assert response.get_json() == {"status": "healthy"}    
