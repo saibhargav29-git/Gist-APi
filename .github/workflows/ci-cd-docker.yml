@@ -1,0 +1,123 @@
+# .github/workflows/ci-cd-docker.yml
+# ------------------------------------
+# CI/CD pipeline — deploys gist-api as a Docker container on EC2.
+#
+# WHY this approach?
+# Simplest path to production. No orchestration layer needed.
+# One EC2 instance runs the container directly.
+# Ideal for single-service, low-complexity deployments.
+#
+# Flow:
+#   push → test → build & push image → SSH into EC2 → docker run
+#
+# Required GitHub Secrets:
+#   DOCKER_USERNAME  — Docker Hub username
+#   DOCKER_PASSWORD  — Docker Hub Personal Access Token (not password)
+#   EC2_HOST         — 13.205.14.181 (Elastic IP of master node)
+#   EC2_SSH_KEY      — Full contents of your .pem file
+
+name: CI/CD — Docker on EC2
+
+on:
+  push:
+    branches:
+      - main
+      - solution
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB 1 — TEST
+  # Runs pytest. If any test fails, the deploy job never runs.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        run: pytest tests/ -v
+
+  # ---------------------------------------------------------------------------
+  # JOB 2 — BUILD, PUSH AND DEPLOY (Docker on EC2)
+  # Only runs if test job passes.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Build, Push and Deploy (Docker)
+    runs-on: ubuntu-latest
+    needs: test    # blocked until test passes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Log in to Docker Hub using PAT (never use password in CI)
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build and push two tags:
+      # :latest      — convenience, always newest
+      # :github.sha  — immutable, tied to exact commit (enables rollback)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/gist-api:latest
+            ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
+
+      # SSH into EC2 and run the new container
+      # WHY these docker commands in sequence?
+      #   pull  — fetch the new image before stopping the old container
+      #           minimises downtime window
+      #   stop  — gracefully stop old container (|| true = don't fail if
+      #           no container is running yet, e.g. first deploy)
+      #   rm    — remove old container so we can reuse the name
+      #   run   — start new container with the exact commit SHA tag
+      #           (not :latest — immutable tag ensures we run what we tested)
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Pull new image first — minimises time with no container running
+            docker pull ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
+
+            # Stop and remove old container gracefully
+            # || true prevents pipeline failure on first deploy (no container yet)
+            docker stop gist-api || true
+            docker rm gist-api   || true
+
+            # Start new container
+            # -d            = detached (run in background)
+            # --name        = gives container a stable name for future stop/rm
+            # -p 8080:8080  = map EC2 port 8080 to container port 8080
+            # --restart=always = auto-restart on EC2 reboot or container crash
+            docker run -d \
+              --name gist-api \
+              -p 8080:8080 \
+              --restart=always \
+              ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
+
+            # Verify container is running
+            docker ps | grep gist-api
+
+            # Quick smoke test — confirm API responds
+            sleep 3
+            curl -f http://localhost:8080/octocat | head -c 200
