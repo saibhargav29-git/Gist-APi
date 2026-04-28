@@ -48,7 +48,7 @@ ________________________________________________________________________________
 
 ____________________________________________________________________________________
 
-## 🚀 My Solution — Gist API
+## ✅ Solution
 
 A Python/Flask API that fetches all public GitHub Gists for a given user and returns a curated JSON response.
 
@@ -111,6 +111,6 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 
 ### Design decisions
 
-- **Flask**: minimal, explicit, appropriate for a single-endpoint service
-- **Pagination**: fetches all pages from GitHub so users with many gists are not silently truncated
+- **Flask**: minimal and appropriate for a single-endpoint service
+- **Pagination**: fetches all pages from GitHub so users with many gists(100's) are not silently truncated
 - **/health endpoint**: liveness probe for Docker HEALTHCHECK
