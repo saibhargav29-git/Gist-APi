@@ -8,6 +8,7 @@ and replaced without touching the server code.
 """
 
 import requests
+from requests.exceptions import Timeout
 
 GITHUB_API_BASE = "https://api.github.com"
 DEFAULT_PER_PAGE = 30  # GitHub's default; we make it explicit and overridable
@@ -23,12 +24,10 @@ class GitHubAPIError(Exception):
 
 def get_public_gists(username: str, per_page: int = DEFAULT_PER_PAGE) -> list[dict]:
     """
-    Fetch ALL public gists for a given GitHub username, following pagination.
-
-    WHY pagination matters:
-        GitHub's API returns at most 100 gists per request (default 30).
-        some users may have hundreds of gists. Without pagination
-        you silently return an incomplete list
+    Fetch ALL public gists for a given GitHub username, following pagination
+    GitHub's API returns at most 100 gists per request (default 30).
+    some users may have hundreds of gists. Without pagination
+    it would return an incomplete list
 
     Args:
         username:    GitHub username.
@@ -46,11 +45,16 @@ def get_public_gists(username: str, per_page: int = DEFAULT_PER_PAGE) -> list[di
 
     while True:
         url = f"{GITHUB_API_BASE}/users/{username}/gists"
-        response = requests.get(
-            url,
-            params={"per_page": per_page, "page": page},
-            timeout=10,
-        )
+        try:
+            response = requests.get(
+                url,
+                params={"per_page": per_page, "page": page},
+                timeout=10,
+            )
+        except Timeout:
+            raise GitHubAPIError(
+                f"GitHub API timed out for user '{username}'."
+            )
 
         if response.status_code == 404:
             raise GitHubUserNotFoundError(f"GitHub user '{username}' not found.")
