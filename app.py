@@ -1,11 +1,11 @@
 """
 app.py
 ------
-Thin HTTP layer. Routes requests to the GitHub client and
-maps domain errors to appropriate HTTP status codes.
+Thin HTTP layer for the Flask app. Routes requests to the GitHub client
+and turns domain errors into the right HTTP status codes.
 
-All business logic lives in github_client.py — this file
-only deals itself with HTTP request/response handling.
+The gist-fetching logic lives in github_client.py, while this file is
+focused on routes and response formatting.
 """
 
 import logging
@@ -52,13 +52,8 @@ def _format_gist(gist: dict) -> dict:
 
 @app.route("/health", methods=["GET"])
 def health():
-    """
-    Simple liveness endpoint for orchestrators (Kubernetes, Docker, etc.)
-
-    Returns 200 as long as the process is alive and Flask is responding.
-    Use this as a Kubernetes liveness probe — if it stops returning 200,
-    the orchestrator restarts the container.
-    """
+    
+    # Simple liveness endpoint for orchestrators (Kubernetes, Docker, etc.)
     return jsonify({"status": "healthy"}), 200
 
 
