@@ -54,7 +54,7 @@ jobs:
             key: ${{ secrets.EC2_SSH_KEY }}
             script: |
                 docker pull ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
-    
+                # Docker deploy with 8080
                 docker run -d --name gist-api \
                       -p 8080:8080 \
                       ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
