@@ -36,8 +36,8 @@ jobs:
             push: true
             context: .
             tags: |
-               {{ $.secrets.DOCKER_USERNAME }}/gist-api:latest
-               {{ $.secrets.DOCKER_USERNAME }}/gist-api:$.{{ github.sha }}
+               ${{ secrets.DOCKER_USERNAME }}/gist-api:latest
+               ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
        
 
   deploy:
@@ -53,11 +53,11 @@ jobs:
             username: ubuntu
             key: ${{ secrets.EC2_SSH_KEY }}
             script: |
-                docker pull {{ $.secrets.DOCKER_USERNAME }}/gist-api:$.{{ github.sha }}
+                docker pull ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
     
                 docker run -d --name gist-api \
                       -p 8080:8080 \
-                      {{ $.secrets.DOCKER_USERNAME }}/gist-api:$.{{ github.sha }}
+                      ${{ secrets.DOCKER_USERNAME }}/gist-api:${{ github.sha }}
             
                   
         
